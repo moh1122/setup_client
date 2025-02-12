@@ -4,6 +4,9 @@
 echo "🚀 Welcome to the Client Setup Script!"
 read -p "📌 Enter the client name (e.g., Thrive, Nahdi, etc...): " CLIENT_NAME
 
+# Convert client name to lowercase for consistency
+CLIENT_NAME_LOWER=$(echo "$CLIENT_NAME" | tr '[:upper:]' '[:lower:]')
+
 # Validate client name
 if [ -z "$CLIENT_NAME" ]; then
   echo "❌ Client name cannot be empty. Please enter a valid client name."
@@ -37,7 +40,7 @@ git checkout main
 git pull origin main
 
 # Step 5: Create or switch to the client branch
-BRANCH_NAME="client-$CLIENT_NAME"
+BRANCH_NAME="client-$CLIENT_NAME_LOWER"
 
 if git show-ref --verify --quiet "refs/heads/$BRANCH_NAME"; then
   echo "🔄 Branch $BRANCH_NAME already exists. Switching to it..."
@@ -49,33 +52,44 @@ fi
 
 # Step 6: Update HOME_URL in app/index.tsx
 echo "🔄 Updating HOME_URL for $CLIENT_NAME..."
-
-# Make sure the line starts with "const HOME_URL =" and replace the URL correctly
 sed -i.bak "s|const HOME_URL = .*|const HOME_URL = '$CLIENT_URL'|" app/index.tsx && rm app/index.tsx.bak
 
 # Verify the change was applied
 echo "🔍 Verifying HOME_URL update..."
 grep "const HOME_URL" app/index.tsx
 
-# Step 7: Replace matching assets without deleting existing files
+# Step 7: Modify app.config.js (Change name, bundleIdentifier, package)
+echo "🔄 Updating app.config.js for $CLIENT_NAME..."
+sed -i.bak -E "s|name: '.*'|name: '$CLIENT_NAME'|" app.config.js
+sed -i.bak -E "s|bundleIdentifier: '.*'|bundleIdentifier: 'app.$CLIENT_NAME_LOWER.cypherlms'|" app.config.js
+sed -i.bak -E "s|package: '.*'|package: 'app.$CLIENT_NAME_LOWER.cypherlms'|" app.config.js
+rm app.config.js.bak
+
+# Verify the change was applied
+echo "🔍 Verifying app.config.js update..."
+grep "name:" app.config.js
+grep "bundleIdentifier:" app.config.js
+grep "package:" app.config.js
+
+# Step 8: Replace matching assets without deleting existing files
 echo "📁 Updating assets for $CLIENT_NAME..."
 cp -R local_assets/$CLIENT_NAME/* assets/
 
 # Verify copied assets
 ls -l assets/
 
-# Step 8: Commit and push changes only if modifications exist
+# Step 9: Commit and push changes only if modifications exist
 if ! git diff --quiet; then
   echo "📌 Staging changes..."
-  git add app/index.tsx assets/
-  git commit -m "Updated HOME_URL ($CLIENT_URL) and replaced assets for $CLIENT_NAME"
+  git add app/index.tsx app.config.js assets/
+  git commit -m "Updated HOME_URL ($CLIENT_URL), app.config.js, and replaced assets for $CLIENT_NAME"
   git push origin $BRANCH_NAME
   echo "✅ Branch $BRANCH_NAME updated and pushed successfully!"
 else
   echo "⚠️ No changes detected. Skipping commit and push."
 fi
 
-# Step 9: Ask if the user wants to build the app now
+# Step 10: Ask if the user wants to build the app now
 read -p "⚙️ Do you want to build the app now? (y/n): " build_now
 if [[ "$build_now" == "y" ]]; then
   echo "📦 Building the app for iOS & Android..."
