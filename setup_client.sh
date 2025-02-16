@@ -92,11 +92,19 @@ fi
 # Step 10: Ask if the user wants to build the app now
 read -p "⚙️ Do you want to build the app now? (y/n): " build_now
 if [[ "$build_now" == "y" ]]; then
-  echo "📦 Building the app for iOS & Android..."
-  npx react-native run-android && npx react-native run-ios
-  echo "🎉 Build completed!"
-else
-  echo "🚀 Setup completed! You can build the app later using:"
-  echo "   👉 npx react-native run-android"
-  echo "   👉 npx react-native run-ios"
+  echo "📦 Building Android app locally..."
+  if eas build --platform android --local; then
+    echo "✅ Android build completed."
+  else
+    echo "❌ Android build failed."
+    exit 1
+  fi
+
+  echo "📦 Building iOS app locally..."
+  if eas build --platform ios --local; then
+    echo "✅ iOS build completed."
+  else
+    echo "❌ iOS build failed."
+    exit 1
+  fi
 fi
