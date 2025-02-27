@@ -22,10 +22,20 @@ if [ -z "$CLIENT_URL" ]; then
   exit 1
 fi
 
-# Step 3: Confirm HOME_URL before proceeding
+# Step 2.5: Ask for the bundle identifier
+read -p "🔑 Enter the bundle identifier for $CLIENT_NAME (e.g., com.example.app): " BUNDLE_IDENTIFIER
+
+# Validate bundle identifier
+if [ -z "$BUNDLE_IDENTIFIER" ]; then
+  echo "❌ Bundle identifier cannot be empty. Please enter a valid identifier."
+  exit 1
+fi
+
+# Step 3: Confirm details before proceeding
 echo "✅ You entered the following details:"
 echo "   - Client Name: $CLIENT_NAME"
 echo "   - HOME_URL: $CLIENT_URL"
+echo "   - Bundle Identifier: $BUNDLE_IDENTIFIER"
 read -p "⚠️ Are these details correct? (y/n): " confirm
 
 if [[ "$confirm" != "y" ]]; then
@@ -61,8 +71,8 @@ grep "const HOME_URL" app/index.tsx
 # Step 7: Modify app.config.js (Change name, bundleIdentifier, package)
 echo "🔄 Updating app.config.js for $CLIENT_NAME..."
 sed -i.bak -E "s|name: '.*'|name: '$CLIENT_NAME'|" app.config.js
-sed -i.bak -E "s|bundleIdentifier: '.*'|bundleIdentifier: 'app.$CLIENT_NAME_LOWER.cypherlms'|" app.config.js
-sed -i.bak -E "s|package: '.*'|package: 'app.$CLIENT_NAME_LOWER.cypherlms'|" app.config.js
+sed -i.bak -E "s|bundleIdentifier: '.*'|bundleIdentifier: '$BUNDLE_IDENTIFIER'|" app.config.js
+sed -i.bak -E "s|package: '.*'|package: '$BUNDLE_IDENTIFIER'|" app.config.js
 rm app.config.js.bak
 
 # Verify the change was applied
@@ -78,11 +88,15 @@ cp -R local_assets/$CLIENT_NAME/* assets/
 # Verify copied assets
 ls -l assets/
 
+# Execute expo prebuild command
+echo "🚀 Running npx expo prebuild..."
+npx expo prebuild
+
 # Step 9: Commit and push changes only if modifications exist
 if ! git diff --quiet; then
   echo "📌 Staging changes..."
   git add app/index.tsx app.config.js assets/
-  git commit -m "Updated HOME_URL ($CLIENT_URL), app.config.js, and replaced assets for $CLIENT_NAME"
+  git commit -m "Updated HOME_URL ($CLIENT_URL), app.config.js (bundleIdentifier: $BUNDLE_IDENTIFIER), and replaced assets for $CLIENT_NAME"
   git push origin $BRANCH_NAME
   echo "✅ Branch $BRANCH_NAME updated and pushed successfully!"
 else
